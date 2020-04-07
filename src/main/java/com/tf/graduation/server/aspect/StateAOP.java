@@ -55,9 +55,9 @@ public class StateAOP {
                 if (args[i] instanceof HttpServletRequest) {
                     Map<String, String> params = HttpServletUtil.getStringParams((HttpServletRequest) args[i]);
                     log.info("checkState get params:{}", JSON.toJSONString(params));
-                    Integer result = (Integer) redisService.get("USERLOGIN"+params.get("nickname"), "state");
-                    if (result!= null && result.equals(1)) {
-                        log.info("返回结点数据");
+                    //查看是否存在token字段，查看redis中是否有此token
+                    if (params.get("token")!=null&&redisService.hasKey(params.get("token"))){
+                        log.info("通过验证："+redisService.get(params.get("token")));
                     } else {
                         throw new IllegalStateException("用户未登录");
                     }

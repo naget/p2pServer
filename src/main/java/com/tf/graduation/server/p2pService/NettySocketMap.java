@@ -8,25 +8,25 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class NettySocketMap {
     private static final Map<String, InetSocketAddress> MAP = new ConcurrentHashMap<>(16);
-    private static final Map<String,List<InetSocketAddress>> GROUP = new ConcurrentHashMap<>(16);
+    private static final Map<String,List<String>> GROUP = new ConcurrentHashMap<>(16);
 
     public static void put(String id,String user, InetSocketAddress channel) {
         MAP.put(id, channel);
-        if (GROUP.get("user")==null||!GROUP.get("user").contains(channel)){
-            putGroup(user,channel);
+        if (GROUP.get("user")==null||!GROUP.get("user").contains(id)){
+            putGroup(user,id);
         }
     }
 
-    private static void putGroup(String user,InetSocketAddress channel){
-        List<InetSocketAddress> channels;
-        channels = GROUP.computeIfAbsent(user, k -> new ArrayList<>(10));
-        channels.add(channel);
+    private static void putGroup(String user,String id){
+        List<String> ids;
+        ids = GROUP.computeIfAbsent(user, k -> new ArrayList<>(10));
+        ids.add(id);
     }
-    public static InetSocketAddress get(Long id) {
-        return MAP.get(id);
+    public static InetSocketAddress get(String userandmac) {
+        return MAP.get(userandmac);
     }
 
-    public static List<InetSocketAddress> getGroup(String user){
+    public static List<String> getGroup(String user){
         return GROUP.get(user);
     }
 
@@ -34,8 +34,8 @@ public class NettySocketMap {
         return MAP;
     }
 
-    public static void remove(InetSocketAddress address) {
-        MAP.entrySet().stream().filter(entry -> entry.getValue() == address).forEach(entry -> MAP.remove(entry.getKey()));
-        GROUP.forEach((key, value) -> value.removeIf(channel -> channel == address));
-    }
+//    public static void remove(InetSocketAddress address) {
+//        MAP.entrySet().stream().filter(entry -> entry.getValue() == address).forEach(entry -> MAP.remove(entry.getKey()));
+//        GROUP.forEach((key, value) -> value.removeIf(channel -> channel == address));
+//    }
 }

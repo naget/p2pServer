@@ -1,5 +1,7 @@
 package com.tf.graduation.server.dao.entity;
 
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
 import lombok.Data;
 
 import java.sql.Timestamp;
@@ -9,6 +11,7 @@ import java.sql.Timestamp;
  */
 @Data
 public class NodeRecord {
+    @TableId(value = "id",type = IdType.AUTO)
     private Integer id;
     private Integer userId;
     private String deviceName;
@@ -17,8 +20,8 @@ public class NodeRecord {
     private String ipv4;
     private String ipv6;
     private Integer active;
-    private Timestamp createdAt;
-    private Timestamp updatedAt;
+    private String createdAt;
+    private String updatedAt;
     private String updatedBy;
     private String createdBy;
 }

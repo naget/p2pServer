@@ -25,4 +25,8 @@ public class ResponseModel {
     public static ResponseModel fail(int code,String message){
         return ResponseModel.builder().code(code).message(message).build();
     }
+
+    public static ResponseModel success(Object o){
+        return ResponseModel.builder().code(200).message("success").data(o).build();
+    }
 }
