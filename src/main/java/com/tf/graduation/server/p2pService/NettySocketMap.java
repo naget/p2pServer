@@ -1,14 +1,12 @@
 package com.tf.graduation.server.p2pService;
 
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class NettySocketMap {
     private static final Map<String, InetSocketAddress> MAP = new ConcurrentHashMap<>(16);
-    private static final Map<String,List<String>> GROUP = new ConcurrentHashMap<>(16);
+    private static final Map<String,Set<String>> GROUP = new ConcurrentHashMap<>(16);
 
     public static void put(String id,String user, InetSocketAddress channel) {
         MAP.put(id, channel);
@@ -18,15 +16,15 @@ public class NettySocketMap {
     }
 
     private static void putGroup(String user,String id){
-        List<String> ids;
-        ids = GROUP.computeIfAbsent(user, k -> new ArrayList<>(10));
+        Set<String> ids;
+        ids = GROUP.computeIfAbsent(user, k -> new HashSet<>(10));
         ids.add(id);
     }
     public static InetSocketAddress get(String userandmac) {
         return MAP.get(userandmac);
     }
 
-    public static List<String> getGroup(String user){
+    public static Set<String> getGroup(String user){
         return GROUP.get(user);
     }
 
@@ -34,8 +32,7 @@ public class NettySocketMap {
         return MAP;
     }
 
-//    public static void remove(InetSocketAddress address) {
-//        MAP.entrySet().stream().filter(entry -> entry.getValue() == address).forEach(entry -> MAP.remove(entry.getKey()));
-//        GROUP.forEach((key, value) -> value.removeIf(channel -> channel == address));
-//    }
+    public static void remove(InetSocketAddress address) {
+        MAP.entrySet().stream().filter(entry -> entry.getValue() == address).forEach(entry -> {MAP.remove(entry.getKey()); GROUP.forEach((key, value) -> value.removeIf(id -> id.equals(entry.getKey())));});
+    }
 }

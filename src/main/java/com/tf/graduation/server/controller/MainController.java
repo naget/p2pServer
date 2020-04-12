@@ -83,7 +83,7 @@ public class MainController {
         Map<String,String> params = HttpServletUtil.getStringParams(request);
         UserInfoOnLine user = redisService.getUserInfo(params.get("token"));
         VersionRecord record = versionRecordService.getLatest(user.getUserId());
-        if (record.getState()==VersionRecordStateEnum.UPDATING.getCode()&&record.getDeviceName().equals(user.getDeviceName())){
+        if (record!=null&&record.getState()==VersionRecordStateEnum.UPDATING.getCode()&&record.getDeviceName().equals(user.getDeviceName())){
             return ResponseModel.success(record);
         }
         if (record==null||record.getState()==VersionRecordStateEnum.UPDATED.getCode()){

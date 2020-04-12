@@ -13,6 +13,8 @@ import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.timeout.IdleState;
+import io.netty.handler.timeout.IdleStateEvent;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -21,6 +23,7 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
@@ -76,36 +79,46 @@ public class EchoServerHandler extends SimpleChannelInboundHandler<DatagramPacke
         }
 
         NettySocketMap.put(user+macAddress, user, packet.sender());
-        if (message.get("type").equals("B")) {
+        if (message.getString("type").equals("H")){
+            log.info("收到客户端心跳:"+packet.sender());
+        }
+        else if (message.get("type").equals("B")) {
             log.info("B指令:"+packet.sender());
         } else if (message.get("type").equals("L")) {
             //保存到addr1中 并发送addr2
             addr1.put(user,packet.sender());
             System.out.println("L 命令， 保存到addr1中 ");
             log.info("对L指令回复到：" + addr1.get(user));
-            JSONObject MM = new JSONObject();
-            MM.put("type", "G");
+            JSONObject remote = new JSONObject();
             if (addr2.get(user)!=null){
                 addr2.get(user).clear();
 
             }
-            List<String> ids = NettySocketMap.getGroup(user);
-            for (int i = 0; i < ids.size(); i++) {
-                InetSocketAddress address = NettySocketMap.get(ids.get(i));
+            Set<String> ids = NettySocketMap.getGroup(user);
+            for (String id :
+                    ids) {
+                InetSocketAddress address = NettySocketMap.get(id);
                 log.info("遍历到addresss中的address：" + address);
-                if (!ids.get(i).equals(user+macAddress)){
-                    log.info("通过" + address + "获取R地址");
+                if (message.getString("version")!=null){
+                    remote.put("version",message.getString("version"));
+                }
+                if (!id.equals(user+macAddress)){
+                    log.info("获取R地址:"+address);
+                    remote.put("type", "AL");
+                    remote.put("ip", address.getAddress().toString().replace("/", ""));
+                    remote.put("port", address.getPort());
                     ctx.writeAndFlush(new DatagramPacket(
-                            Unpooled.copiedBuffer(MM.toJSONString().getBytes()), address));
+                            Unpooled.copiedBuffer(remote.toJSONString().getBytes()), packet.sender()));
+                    log.info("发送"+remote+"给"+packet.sender());
+                    remote.put("type","AR");
+                    remote.put("ip",packet.sender().getAddress().toString().replace("/",""));
+                    remote.put("port",packet.sender().getPort());
+                    ctx.writeAndFlush(new DatagramPacket(
+                            Unpooled.copiedBuffer(remote.toJSONString().getBytes()), address));
+                    log.info("发送"+remote+"给"+address);
 //                    break;
                 }
             }
-            Thread.sleep(2000);
-
-            MM.put("type", "MM");
-            ctx.writeAndFlush(new DatagramPacket(
-                    Unpooled.copiedBuffer(MM.toJSONString().getBytes()), addr1.get(user)));
-            log.info("发送MM指令到：" + addr1.get(user));
         } else if (message.get("type").equals("R")) {
             //保存到addr2中 并发送addr1
             List<InetSocketAddress>  socketAddresses = addr2.computeIfAbsent(user,k->new ArrayList<InetSocketAddress>());
@@ -143,10 +156,9 @@ public class EchoServerHandler extends SimpleChannelInboundHandler<DatagramPacke
             }else {
                 log.info("服务器收到M指令，但是没有收到可以同步的远程结点的响应");
             }
-
-
         }
         System.out.println("收到消息：" + str);
+        buf.release();
 
     }
 
@@ -155,5 +167,21 @@ public class EchoServerHandler extends SimpleChannelInboundHandler<DatagramPacke
         System.out.println("服务器启动...");
 
         super.channelActive(ctx);
+    }
+
+    @Override
+    public void userEventTriggered(ChannelHandlerContext ctx, Object obj) throws Exception {
+        if (obj instanceof IdleStateEvent) {
+            IdleStateEvent event = (IdleStateEvent) obj;
+            if (IdleState.READER_IDLE.equals(event.state())) { // 如果读通道处于空闲状态，说明没有接收到心跳命令
+                log.info("已等待15秒还没收到客户端发来的消息");
+//                NettySocketMap.remove(ctx.channel().);
+                // TODO: 2020/4/10 移除map中的对应元素
+                ctx.channel().close();
+
+            }
+        } else {
+            super.userEventTriggered(ctx, obj);
+        }
     }
 }
